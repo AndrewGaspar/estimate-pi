@@ -1,0 +1,12 @@
+[package]
+name = "estimate-pi"
+version = "0.1.0"
+authors = ["Andrew Gaspar <andrew.gaspar@outlook.com>"]
+edition = "2018"
+
+[dependencies]
+rayon = "1.0"
+
+[dependencies.mpi]
+git = "https://github.com/bsteinb/rsmpi.git"
+default-features = false

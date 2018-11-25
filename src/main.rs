@@ -44,12 +44,33 @@ fn main() {
 
     let num_local = n / size64 + if rank64 < n % size64 { 1 } else { 0 };
 
-    let partial_pi = (0..num_local)
-        .into_par_iter()
-        .map(|i| i * size64 + rank64 + 1)
-        .map(|i| f(h * ((i as f64) - 0.5)))
-        .sum::<f64>()
-        * h;
+    let partial_pi = if rayon::current_num_threads() > 1 {
+        const BATCH: i64 = 2000;
+
+        let num_batches = num_local / BATCH;
+        let num_remain = num_local % BATCH;
+
+        (0..num_batches)
+            .into_par_iter()
+            // .flat_map(|x| x * BATCH..(x + 1) * BATCH)
+            .map(|x| {
+                (x * BATCH..(x + 1) * BATCH)
+                    .map(|i| f(h * (((i * size64 + rank64 + 1) as f64) - 0.5)))
+                    .sum::<f64>()
+            })
+            .sum::<f64>()
+            + if num_remain != 0 {
+                (num_batches * BATCH..num_local)
+                    .map(|i| f(h * (((i * size64 + rank64 + 1) as f64) - 0.5)))
+                    .sum::<f64>()
+            } else {
+                0.0
+            }
+    } else {
+        (0..num_local)
+            .map(|i| f(h * (((i * size64 + rank64 + 1) as f64) - 0.5)))
+            .sum::<f64>()
+    } * h;
 
     if rank == root_process.rank() {
         let mut pi = 0.;
